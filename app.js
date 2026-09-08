@@ -26,14 +26,32 @@ const nodes = new Map(); // starId -> { g, core, spike, label, rank, tree, star 
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
+const STORAGE_KEY = 'skill-tree-med:state:v1';
+
 function load() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && Array.isArray(parsed.trees)) {
+        return normalize(parsed);
+      }
+    }
+  } catch (error) {
+    console.warn('Не удалось восстановить сохранённые данные:', error);
+  }
+
   return normalize(clone(window.SKILL_DATA));
 }
 
-/* Прогресс хранится в памяти сессии. Чтобы сохранить его надолго,
-   откройте «Данные» и скопируйте JSON (или вставьте его в data.js). */
-function save() { /* no-op: состояние живёт в памяти, экспорт через «Данные» */ }
-
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Не удалось сохранить данные:', error);
+    toast('Не удалось сохранить изменения в браузере');
+  }
+}
 function normalize(d) {
   d.trees.forEach((t, i) => {
     if (!t.color) t.color = PALETTE[i % PALETTE.length];
@@ -894,6 +912,7 @@ $('btnLoad').addEventListener('click', () => {
 });
 
 $('btnReset').addEventListener('click', () => {
+  localStorage.removeItem(STORAGE_KEY);
   data = normalize(clone(window.SKILL_DATA));
   selected = null;
   build();
